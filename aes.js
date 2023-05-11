@@ -1,3 +1,5 @@
+const { findOneAndReplace } = require("./models/user");
+
 const SubByte =
     [
         ["63", "7C", "77", "7B", "F2", "6B", "6F", "C5", "30", "01", "67", "2B", "FE", "D7",
@@ -27,7 +29,7 @@ const SubByte =
 const InvSubByte =
     [
         ["52", "09", "6A", "D5", "30", "36", "A5", "38", "BF", "40", "A3", "9E", "81", "F3", "D7", "FB"],
-        ["7C", "E3", "39", "82", "9B", "2F", "FF", "87", "34", "8E", "43", "44", " C4", "DE", "E9", "CB"],
+        ["7C", "E3", "39", "82", "9B", "2F", "FF", "87", "34", "8E", "43", "44", "C4", "DE", "E9", "CB"],
         ["54", "7B", "94", "32", "A6", "C2", "23", "3D", "EE", "4C", "95", "0B", "42", "FA", "C3", "4E"],
         ["08", "2E", "A1", "66", "28", "D9", "24", "B2", "76", "5B", "A2", "49", "6D", "8B",
             "D1", "25"],
@@ -42,7 +44,7 @@ const InvSubByte =
         ["96", "AC", "74", "22", "E7", "AD", "35", "85", "E2", "F9", "37", "E8", "1C", "75", "DF", "6E"],
         ["47", "F1", "1A", "71", "1D", "29", "C5", "89", "6F", "B7", "62", "0E", "AA", "18", "BE", "1B"],
         ["FC", "56", "3E", "4B", "C6", "D2", "79", "20", "9A", "DB", "C0", "FE", "78", "CD", "5A", "F4"],
-        ["1F", "DD", "A8", "33", "88", "07", "C7", "31", "B1", "12", "10", "59", " 27", "80", "EC", "5F"],
+        ["1F", "DD", "A8", "33", "88", "07", "C7", "31", "B1", "12", "10", "59", "27", "80", "EC", "5F"],
         ["60", "51", "7F", "A9", "19", "B5", "4A", "0D", "2D", "E5", "7A", "9F", "93", "C9", "9C", "EF"],
         ["A0", "E0", "3B", "4D", "AE", "2A", "F5", "B0", "C8", "EB", "BB", "3C", "83", "53", "99", "61"],
         ["17", "2B", "04", "7E", "BA", "77", "D6", "26", "E1", "69", "14", "63", "55", "21", "0C", "7D"]
@@ -122,28 +124,29 @@ let c=0
 const binary = (n) => {
     
     let st = ""; 
+  
     while (n >0) {
       let it =n%2
         st = String.fromCharCode( it + 48) + st; 
-        // console.log(String.fromCharCode(n % 2 + 48),"  ")
+        
         n = Math.floor(n/2);
-        // console.log(n)
+   
     }
     n = st.length;
     for (let i = 0; i < (8 - n); i++) {
         st = '0' + st;
     }
-    // console.log()
 
     return st;
 }
 
 const decimal = (st) => {
     let sum = 0, n = st.length; 
-    
+  
     for (let i = n - 1; i >= 0; i--) {
         sum +=Math.pow(2, (n - 1 - i)) * (st[i].charCodeAt(0) - 48);
     }
+    
     return sum;
 }
 
@@ -178,18 +181,197 @@ const convertHex = (hex) => {
 const prlet = (va) => {
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
-            console.log(convertHex(va[i][j].substring(0, 4)) + convertHex(va[i][j].substring(4, 4)) + " ")
+            process.stdout.write(convertHex(va[i][j].substr(0, 4)) + convertHex(va[i][j].substr(4, 4)) + " ")
         }
+        console.log(" ")
 
     }
+    console.log("\n\n")
 
 }
+
+const dynamicBox = (state,key) => {
+    let numberMap = new Map()
+    let lookup = []
+    let newSBOX =[]
+    for(let i=0;i<16;i++)
+    {
+        for(let j=0;j<16;j++){
+        lookup[i]=[]
+        newSBOX[i] =[]
+        }
+        for(let j=0;j<16;j++)
+        {
+            lookup[i][j] =-1;
+            newSBOX[i][j] = SubByte[i][j]
+        }
+    }
+    let l=0,m=0;
+    for(let i=0;i<4;i++)
+    {
+        for(let j=0;j<4;j++)
+        {
+            let dec = decimal(key[i][j])
+            let k=0;
+            while(k<16)
+            {
+                if(!numberMap.has(dec%256))
+                {
+                    lookup[l][m] = dec%256
+                    numberMap[dec%256]++
+                    if(m>=15)
+                    {
+                        m=-1
+                        l++
+                    }
+                    m++
+                    k++
+                }
+               dec++
+            }
+        }
+    }
+
+    for(let i=0;i<16;i++)
+    {
+        for(let j=0;j<16;j++)
+        {
+            
+            let ii = Math.floor(lookup[i][j]/16)
+            let jj = Math.floor(lookup[i][j]%16)
+          
+            let temp = newSBOX[ii][jj]
+            newSBOX[ii][jj] = newSBOX[i][j]
+            newSBOX[i][j] = temp
+        }
+    
+    }
+
+    
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            let st = state[i][j];
+            let row = decimal(st.substr(0, 4)); 
+            let col = decimal(st.substr(4, 4)); 
+            st = newSBOX[row][col];
+             
+            state[i][j] = HexaToBinary(st[0]) + HexaToBinary(st[1]);
+        
+        }
+    }
+    return state
+}
+const decimalToHex = (num) =>{
+    if(num<=9) return num.toString()
+    else if(num==10) return "A"
+    else if(num == 11) return "B"
+    else if(num == 12) return "C"
+    else if(num == 13) return "D"
+    else if(num == 14) return "E"
+    else if(num == 15) return "F"
+}
+
+const inverseDynamicBox = (state,key) => {
+    let numberMap = new Map()
+    let lookup = []
+    let newSBOX =[]
+    let invNewSBOX = []
+    for(let i=0;i<16;i++)
+    {
+        for(let j=0;j<16;j++){
+        lookup[i]=[]
+        newSBOX[i] =[]
+        invNewSBOX[i] = []
+        }
+        for(let j=0;j<16;j++)
+        {
+            lookup[i][j] =-1;
+            newSBOX[i][j] = SubByte[i][j]
+            
+        }
+    }
+    let l=0,m=0;
+    for(let i=0;i<4;i++)
+    {
+        for(let j=0;j<4;j++)
+        {
+            let dec = decimal(key[i][j])
+            let k=0;
+            while(k<16)
+            {
+                if(!numberMap.has(dec%256))
+                {
+                    lookup[l][m] = dec%256
+                    numberMap[dec%256]++
+                    if(m>=15)
+                    {
+                        m=-1
+                        l++
+                    }
+                    m++
+                    k++
+                }
+               dec++
+            }
+        }
+    }
+
+    for(let i=0;i<16;i++)
+    {
+        for(let j=0;j<16;j++)
+        {
+           
+            let ii = Math.floor(lookup[i][j]/16)
+            let jj = Math.floor(lookup[i][j]%16)
+            let temp = newSBOX[ii][jj]
+            newSBOX[ii][jj] = newSBOX[i][j]
+            newSBOX[i][j] = temp
+        }
+     
+    }
+
+    for(let i=0;i<16;i++)
+    {
+        for(let j=0; j<16; j++)
+        {   let st = newSBOX[i][j];
+           
+            let row = decimal(HexaToBinary(st[0])); 
+            let col = decimal(HexaToBinary(st[1])); 
+            let put = decimalToHex(i)+decimalToHex(j)
+            
+            invNewSBOX[row][col] = put
+        }
+      
+    }
+    
+    
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            let st = state[i][j];
+            let row = decimal(st.substr(0, 4)); 
+            let col = decimal(st.substr(4, 4)); 
+            st = invNewSBOX[row][col];
+   
+            state[i][j] = HexaToBinary(st[0]) + HexaToBinary(st[1]);
+            
+        }
+    }
+    return state
+
+     
+    return state
+}
+
 const subByte = (state) => {
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
             let st = state[i][j];
-            let row = decimal(st.substring(0, 4)); let col = decimal(st.substring(4, 4)); st = SubByte[row][col];
+            let row = decimal(st.substr(0, 4)); 
+            let col = decimal(st.substr(4, 4)); 
+            st = SubByte[row][col];
+            
             state[i][j] = HexaToBinary(st[0]) + HexaToBinary(st[1]);
+            
         }
     }
     return state
@@ -199,7 +381,9 @@ const invSubByte = (state) => {
         for (let j = 0; j < 4; j++) {
             let st = state[i][j];
 
-            let row = decimal(st.substring(0, 4)); let col = decimal(st.substring(4, 4)); st = InvSubByte[row][col];
+            let row = decimal(st.substr(0, 4)); 
+            let col = decimal(st.substr(4, 4)); 
+            st = InvSubByte[row][col];
             state[i][j] = HexaToBinary(st[0]) + HexaToBinary(st[1]);
         }
     }
@@ -222,6 +406,7 @@ const leftShift = (state) => {
     return state
 }
 const rightShift = (state) => {
+   
     for (let i = 3; i > 0; i--) {
         let tr = [];
         for (let j = 3; j >= 4 - i; j--) {
@@ -235,6 +420,7 @@ const rightShift = (state) => {
             state[i][j] = tr[k]; k++;
         }
     }
+ 
     return state
 }
 const exor = (st1, st2) => {
@@ -247,16 +433,19 @@ const exor = (st1, st2) => {
 }
 
 const multiplication = (st1, st2) => {
-    let r1 = decimal(st1.substring(0, 4)); let c1 = decimal(st1.substring(4, 4)); let r2 = decimal(st2.substring(0, 4)); let c2 = decimal(st2.substring(4, 4));
+    let r1 = decimal(st1.substr(0, 4)); 
+    let c1 = decimal(st1.substr(4, 4)); 
+    let r2 = decimal(st2.substr(0, 4)); 
+    let c2 = decimal(st2.substr(4, 4));
     if ((r1 == 0 && c1 == 0) || (r2 == 0 && c2 == 0)) {
         return "00000000";
     }
 
-    let s1 = LTable[r1][c1]; let s2 = LTable[r2][c2]; let final = "";
+    let s1 = LTable[r1][c1]; let s2 = LTable[r2][c2]; 
+    let final = "";
 
     if ((decimal(HexaToBinary(s1[0]) + HexaToBinary(s1[1])) + decimal(HexaToBinary(s2[0]) + HexaToBinary(s2[1]))) > 255) {
-        let
-            va = decimal(HexaToBinary(s1[0]) + HexaToBinary(s1[1])) + decimal(HexaToBinary(s2[0]) + HexaToBinary(s2[1])) - 255;
+        let va = decimal(HexaToBinary(s1[0]) + HexaToBinary(s1[1])) + decimal(HexaToBinary(s2[0]) + HexaToBinary(s2[1])) - 255;
         final = binary(va);
     }
     else {
@@ -264,18 +453,30 @@ const multiplication = (st1, st2) => {
         final = binary(decimal(HexaToBinary(s1[0]) + HexaToBinary(s1[1])) + decimal(HexaToBinary(s2[0]) + HexaToBinary(s2[1])));
     }
 
-    r1 = decimal(final.substring(0, 4)); c1 = decimal(final.substring(4, 4)); final = ETable[r1][c1];
-    final = HexaToBinary(final[0]) + HexaToBinary(final[1]); return final;
+    r1 = decimal(final.substr(0, 4)); 
+    c1 = decimal(final.substr(4, 4));
+     final = ETable[r1][c1];
+    final = HexaToBinary(final[0]) + HexaToBinary(final[1]); 
+    return final;
 }
 
 
 const mixColumn = (st1) => {
-    let state = st1.map((item) => item.slice())
+    let state = DimensionArray(4,4,0)
+    for(let i=0;i<4;i++)
+    {
+        for(let j=0;j<4;j++)
+        {
+            state[i][j] =st1[i][j]
+        }
+    }
 
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
-            let ex = "00000000"; for (let k = 0; k < 4; k++) {
-                let s1 = Constant[j][k]; ex = exor(multiplication(HexaToBinary(s1[0]) + HexaToBinary(s1[1]), state[k][i]), ex);
+            let ex = "00000000"; 
+            for (let k = 0; k < 4; k++) {
+                let s1 = Constant[j][k]; 
+                ex = exor(multiplication(HexaToBinary(s1[0]) + HexaToBinary(s1[1]), state[k][i]), ex);
             }
             st1[j][i] = ex;
         }
@@ -286,15 +487,25 @@ const mixColumn = (st1) => {
 
 
 const invMixColumn = (st1) => {
-    let state = st1.map((item) => item.slice())
+    let state = DimensionArray(4,4,0)
+    for(let i=0;i<4;i++)
+    {
+        for(let j=0;j<4;j++)
+        {
+            state[i][j] =st1[i][j]
+        }
+    }
     for (let i = 0; i < 4; i++) {
 
         for (let j = 0; j < 4; j++) {
-            let ex = "00000000"; for (let k = 0; k < 4; k++) {
+            let ex = "00000000"; 
+            for (let k = 0; k < 4; k++) {
                 let s1 = InvConstant[j][k];
 
-                st1[j][i] = exor(multiplication(HexaToBinary(s1[0]) + HexaToBinary(s1[1]), state[k][i]), ex); ex = st1[j][i];
+                ex = exor(multiplication(HexaToBinary(s1[0]) + HexaToBinary(s1[1]), state[k][i]), ex);
+                 
             }
+            st1[j][i] = ex;
         }
     }
     return st1;
@@ -307,7 +518,9 @@ const giveT = (st) => {
     }
     st[3] = st1;
     for (let i = 0; i < 4; i++) {
-        let row = decimal(st[i].substring(0, 4)); let col = decimal(st[i].substring(4, 4)); let str = SubByte[row][col];
+        let row = decimal(st[i].substr(0, 4)); 
+        let col = decimal(st[i].substr(4, 4)); 
+        let str = SubByte[row][col];
         st[i] = HexaToBinary(str[0]) + HexaToBinary(str[1]);
     }
     st[0] = exor(st[0], HexaToBinary(RCon[c][0]) + HexaToBinary(RCon[c][1]));
@@ -321,7 +534,8 @@ const invGiveT = (st) => {
     st[3] = st1;
     console.log(st)
     for (let i = 0; i < 4; i++) {
-        let row = decimal(st[i].substring(0, 4)); let col = decimal(st[i].substring(4, 4)); let str = InvSubByte[row][col];
+        let row = decimal(st[i].substr(0, 4)); let col = decimal(st[i].substr(4, 4)); 
+        let str = InvSubByte[row][col];
         st[i] = HexaToBinary(str[0]) + HexaToBinary(str[1]);
 
     }
@@ -329,14 +543,15 @@ const invGiveT = (st) => {
 
     return st;
 }
-const keyGenration = (key) => {
+const keyGenration = (key1) => {
     let last = [];
+    let key = key1.slice()
     for (let i = 0; i < 4; i++) {
         last.push(key[i][3]);
     }
-    giveT(last);
+    last = giveT(last);
     for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
+        for (let j = 0; j < 4; j++){
             last[j] = exor(key[j][i], last[j]);
         }
         for (let j = 0; j < 4; j++) {
@@ -346,24 +561,7 @@ const keyGenration = (key) => {
     return key;
 
 }
-const invKeyGenration = (key) => {
-    let last = [];
-    for (let i = 0; i < 4; i++) {
-        last.push(key[i][3]);
-    }
-    invGiveT(last);
-     for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-            last[j] = exor(key[j][i], last[j]);
-        }
-        for (let j = 0; j < 4; j++) {
-            key[j][i] = last[j];
-        }
-    }
-    return key
-
-}
-
+ 
 const addRoundKey = (state, key) => {
     for (let j = 0; j < 4; j++) {
         for (let i = 0; i < 4; i++) {
@@ -373,54 +571,71 @@ const addRoundKey = (state, key) => {
 
      return state
 }
+
 const Round = (state, key) => {
-    subByte(state); leftShift(state); mixColumn(state); addRoundKey(state, key);
+    state = dynamicBox(state,key)
+    state = subByte(state.slice()); 
+ 
+    state = leftShift(state.slice()); 
+ 
+    state = mixColumn(state.slice()); 
+ 
+    state = addRoundKey(state.slice(), key.slice());
+ 
     return state
 }
-const invRound = (state, key) => {
-    invMixColumn(state); rightShift(state); invSubByte(state); addRoundKey(state, key);
+const invRound = (state, key,key1) => {
+    state = rightShift(state.slice());
+   
+    state = invSubByte(state.slice()); 
+    state = inverseDynamicBox(state,key1)
+ 
+    state = addRoundKey(state.slice(), key.slice());
+ 
+     state = invMixColumn(state.slice()); 
+    
     return state
 
 }
 
 const Encrypt = (state, keys) => {
-   
-   state= addRoundKey(state, keys[0]); 
-    //  cout << "Initial Round state is:\n";
-    prlet(state);
-
+   console.log("Encryption")
+ 
+   state = addRoundKey(state.slice(), keys[0]); 
+ 
     for (let i = 0; i < 9; i++) {
-        // cout << "Round " << i + 1 << " state is:\n"; prlet(state);
-    //    key = keyGenration(key);
-       
-        // c++;
-       state = Round(state, keys[i+1]);
+     
+       state = Round(state.slice(), keys[i+1]);
 
     }
-    // key =keyGenration(key);
+ 
+    state = dynamicBox(state,keys[10])
+    state = subByte(state.slice());
     
-    state = subByte(state);
-    state = leftShift(state);
-    state = addRoundKey(state, keys[10]);
-    //  cout << "Final state is:\n"; 
-    prlet(state);
+    state = leftShift(state.slice());
+   
+    state = addRoundKey(state.slice(), keys[10]);
+    
     return  state
 }
 const Decryption = (state, keys) => {
-     
-    state = addRoundKey(state, keys[10]);
-    //  cout << "Initial Round state is:\n"; 
-    prlet(state);
-    state = rightShift(state);
-    state = invSubByte(state);
-  
-    state =addRoundKey(state, keys[9]);
+    console.log("Decrypt matrix\n\n")
+ 
+    state = addRoundKey(state.slice(), keys[10]);
     
-    // cout << "Round 10 state is:\n"; prlet(state);
+ 
     for (let i = 0; i < 9; i++) {
-        // cout << "Round " << 9 - i << " state is:\n"; prlet(state);
-        state = invRound(state, keys[8-i]);
+ 
+        state = invRound(state.slice(), keys[9-i], keys[9-i+1]);
     }
+
+    state = rightShift(state.slice());
+ 
+    state = invSubByte(state.slice());
+    state = inverseDynamicBox(state,keys[1])
+ 
+    state =addRoundKey(state.slice(), keys[0]);
+ 
     return state;
 
 }
@@ -428,7 +643,7 @@ const Decryption = (state, keys) => {
 const  DimensionArray =(a, b, it) =>{
     let arr = [];
   
-    // creating two dimensional array
+  
     for (let i = 0; i< a; i++) {
         for(let j = 0; j< b; j++) {
             arr[i] = [];
@@ -436,17 +651,29 @@ const  DimensionArray =(a, b, it) =>{
     }
      
    if(it!=0){
-    // inserting elements to array
-    for (let i = 0; i< a; i++) {
-        for(let j = 0; j< b; j++) {
-            for( let k=0;k<it;k++)
-            arr[i][j] = [];
-        }
+ 
+    let arr1 = []
+    for(let i=0;i<it;i++)
+    {
+        arr1[i]  = arr
     }
+    return arr1;
+     
 }
     return arr;
 }
 
+const copyArray =(data )=>{
+    let arr = DimensionArray(4,4,0)
+    for(let i=0;i<4;i++)
+    {
+        for(let j=0;j<4;j++)
+        {
+            arr[i][j] = data[i][j];
+        }
+    }
+    return arr;
+}
 const getState = (data)=>{
    let state = DimensionArray(4,4,0)
    let k=0
@@ -454,7 +681,7 @@ const getState = (data)=>{
    {
     for(let j=0;j<4;j++)
     {
-        state[j][i] = binary(data[k])
+        state[j][i] = binary(data[k].charCodeAt(0))
         k++
     }
    }
@@ -473,9 +700,9 @@ const getText = (data)=>{
     }
     return text
 }
-const aesEncy = (msg, key) => {
+const aesEncy1 = (msg, key,iv) => {
  c=0
-    //key Generation 
+ 
     console.log("come")
     let keyArr = DimensionArray(4,4,0)
     let k=0;
@@ -484,72 +711,89 @@ const aesEncy = (msg, key) => {
         for(let j=0;j<4;j++)
         {
             keyArr[j][i] = binary(key[k].charCodeAt(0))
-            // console.log(keyArr[j][i]," ",key[k])
+          
             k++;
         }
-        // console.log("\n")
+ 
     }
+
     console.log("come")
-    let keys = DimensionArray(4,4,11)
-    keys[0] = keyArr
+    let keys = []
+    iv=key
+    keys.push(copyArray(keyArr))
+     
     for( let i=1;i<11;i++)
     {
-         keyArr = keyGenration(keyArr);
-         keys[i] = keyArr
+        keyGenration(keyArr.slice(0)) 
+     
+         keys.push(copyArray(keyArr))
+          
          c++;
     }
    
-    // Encryt Data
 
     while(msg.length%16!=0)
     {
-        msg+='@'
+        msg+=' '
     }
+    console.log(msg.length)
     let encData =""
     for(let i=0;i<msg.length/16;i++)
     {
-        let data = msg.substring(i*16,16)
+        let data = msg.substr(i*16,16)
+        console.log(data)
+        console.log(data.length)
         let state1 = getState(data)
-        let state= Encrypt(state1, keys)
+ 
+        let keys1 = new Array()
+        keys1 = keys
+        let state= Encrypt(state1.slice(), keys1.slice())
         encData+=getText(state)
+        console.log("Data ", encData)
+       
     }
+    
+    
+
     return encData
 }
 
-const aesDec = (msg, key) => {
+const aesDec1 = (msg, key,iv) => {
     c=0
-    // key Generate
+ 
     let keyArr = DimensionArray(4,4,0)
     let k=0;
     for(let i=0;i<4;i++)
     {
         for(let j=0;j<4;j++)
         {
-            keyArr[j][i] = binary(key[k])
+            keyArr[j][i] = binary(key[k].charCodeAt(0))
             k++;
+     
         }
     }
-    let keys = DimensionArray(4,4,11)
-    keys[0] = keyArr
+    let keys =  []
+    keys.push(copyArray(keyArr))
     for( let i=1;i<11;i++)
     {
         keyArr = keyGenration(keyArr);
-         keys[i] = keyArr
+        keys.push(copyArray(keyArr))
          c++;
     }
-
-    // Decrypt text
+    iv =key
+    
+    
     let decData =""
     for(let i=0;i<msg.length/16;i++)
     {
-        let data = msg.substring(i*16,16)
+        let data = msg.substr(i*16,16)
         let state1 = getState(data)
+         
         let state= Decryption(state1, keys)
         decData+=getText(state)
+        
     }
-    // console.log(decData)
-  while(decData[decData.length-1]=='@')
-  decData = decData.substring(0,decData.length -1)
+ 
   return decData
 }
-module.exports= { aesEncy, aesDec }
+module.exports= { aesEncy1, aesDec1 }

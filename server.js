@@ -2,9 +2,9 @@ const express =require('express')
 const bodyParser =require('body-parser')
 const cors = require('cors')
 const user=require('./models/user')
-const { ObjectId} =require('mongoose')
-const { aesEncy1 , aesDec1 } = require('./models/aesc')
-const { aesEncy, aesDec } = require('./aes')
+const { aesEncy1 , aesDec1 } = require('./aes')
+ 
+ 
 
 const app =express()
 const PORT =process.env.PORT|| 4000;
@@ -100,12 +100,13 @@ app.post('/decrypt',async(req,res)=>{
     const decData =  await aesDec1(data.decData,user1[0].Key, user1[0].Iv)
     res.json(decData)
     res.end()
-})
-
+}) 
+ 
 app.listen(PORT,()=>{
-    // const data =aesEncy("Good Morning","pfy0dC2mzYbQNED3")
-    // console.log(data)
-    // console.log(aesDec(data,"pfy0dC2mzYbQNED3"))
+   
+    const data =aesEncy1("bhot buri galti. oye kya bat h kya chiz h baba","Thats my Kung Fu","sdsd")
+    console.log(data)
+    console.log(aesDec1(data,"Thats my Kung Fu","jkgj"))
     console.log(`Runing at http//localhost:${PORT}`)
 })
 
