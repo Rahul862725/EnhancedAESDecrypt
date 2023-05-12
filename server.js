@@ -5,6 +5,9 @@ const user=require('./models/user')
 const { aesEncy1 , aesDec1 } = require('./aes')
  
  
+ 
+ 
+ 
 
 const app =express()
 const PORT =process.env.PORT|| 4000;
@@ -104,9 +107,9 @@ app.post('/decrypt',async(req,res)=>{
  
 app.listen(PORT,()=>{
    
-    // const data =aesEncy1("bhot buri galti. oye kya bat h kya chiz h baba","Thats my Kung Fu","sdsd")
-    // console.log(data)
-    // console.log(aesDec1(data,"Thats my Kung Fu","jkgj"))
+    const data =aesEncy1("bhot buri galti. oye kya bat h kya chiz h baba","Thats my Kung Fu","sdsd")
+    console.log(data)
+    console.log(aesDec1(data,"Thats my Kung Fu","jkgj"))
     console.log(`Runing at http//localhost:${PORT}`)
 })
 
